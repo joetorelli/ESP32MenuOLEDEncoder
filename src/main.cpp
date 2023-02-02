@@ -10,7 +10,7 @@
 #include "Wire.h"
 #include "OLED.h"
 #include "Sensor.h"
-#include <MenuSystem.h>
+// #include <MenuSystem.h>
 #include "AiEsp32RotaryEncoder.h"
 #include "AiEsp32RotaryEncoderNumberSelector.h"
 #include "Button2.h"
@@ -106,8 +106,8 @@ Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // struct OLED_SW Switch_State;
 
 // depending on your encoder - try 1,2 or 4 to get expected behaviour
-//#define ROTARY_ENCODER_STEPS 1
-//#define ROTARY_ENCODER_STEPS 2
+// #define ROTARY_ENCODER_STEPS 1
+// #define ROTARY_ENCODER_STEPS 2
 #define ROTARY_ENCODER_STEPS 8
 
 /**************************  rotary encoder  **********************/
@@ -143,107 +143,6 @@ void pressed(Button2 &btn);
 // void myTapHandler(Button2 &btn);
 
 /***********************************  menus  **************************/
-// menu renderer
-class MyRenderer : public MenuComponentRenderer
-{
-public:
-  void render(Menu const &menu) const
-  {
-    // Serial.println("");
-    /*     for (int i = 0; i < menu.get_num_components(); ++i)
-        {
-          MenuComponent const *cp_m_comp = menu.get_menu_component(i);
-          cp_m_comp->render(*this);
-          // OLED_Display.print(cp_m_comp->get_name());
-          if (cp_m_comp->is_current())
-            OLED_Display.print("*");
-
-          OLED_Display.println("");
-        } */
-    /*     // menu.render(*this);
-        // menu.get_current_component()->render(*this);
-
-        // OLED_Display.clearDisplay();
-        OLED_Display.setCursor(0, 0);
-        // menu.render(*this);
-        OLED_Display.print(menu.get_name());
-        OLED_Display.setCursor(0, 0);
-        menu.get_current_component()->render(*this);
-        OLED_Display.display();
-
-      OLED_Display.println( menu.get_current_component()->get_name());
-    */
-  }
-
-  void render_menu_item(MenuItem const &menu_item) const
-  {
-
-    // OLED_Display.setCursor(0, 1 * 8);
-
-    OLED_Display.print(menu_item.get_name());
-    // Serial.print(menu_item.get_name());
-    OLED_Display.display();
-  }
-
-  void render_back_menu_item(BackMenuItem const &menu_item) const
-  {
-    // OLED_Display.setCursor(0, 1 * 8);
-    OLED_Display.print(menu_item.get_name());
-    // Serial.print(menu_item.get_name());
-    OLED_Display.display();
-  }
-
-  void render_numeric_menu_item(NumericMenuItem const &menu_item) const
-  {
-    // OLED_Display.setCursor(0, 1 * 8);
-    OLED_Display.print(menu_item.get_name());
-    // Serial.print(menu_item.get_name());
-    OLED_Display.display();
-  }
-
-  void render_menu(Menu const &menu) const
-  {
-
-    // OLED_Display.setCursor(0, 0 * 8);
-    OLED_Display.print(menu.get_name());
-    // Serial.print(menu.get_name());
-    OLED_Display.display();
-  }
-};
-
-void displayMenu();
-MyRenderer my_renderer;
-// forward declarations
-void on_item1_selected(MenuComponent *p_menu_component);
-void on_item2_selected(MenuComponent *p_menu_component);
-void on_item3_selected(MenuComponent *p_menu_component);
-void on_item4_selected(MenuComponent *p_menu_component);
-void on_item5_selected(MenuComponent *p_menu_component);
-void on_item6_selected(MenuComponent *p_menu_component);
-void on_item7_selected(MenuComponent *p_menu_component);
-void on_item8_selected(MenuComponent *p_menu_component);
-// void on_item9_selected(MenuComponent *p_menu_component);
-
-// Menu variables
-MenuSystem ms(my_renderer);
-Menu mu1("Pump");
-Menu mu2("Alarm");
-Menu mu3("CL");
-// MenuItem mm_mi1("Pump", &on_item1_selected);
-// MenuItem mm_mi2("Alarm", &on_item2_selected);
-
-// pump menu
-MenuItem mu1_mi1("Hi", &on_item1_selected);
-MenuItem mu1_mi2("Low", &on_item2_selected);
-MenuItem mu1_mi3("Back", &on_item3_selected);
-// alarm menu
-MenuItem mu2_mi4("Hi", &on_item4_selected);
-MenuItem mu2_mi5("Low", &on_item5_selected);
-MenuItem mu2_mi6("Back", &on_item6_selected);
-// cl menu
-MenuItem mu3_mi7("Time", &on_item7_selected);
-// MenuItem mu3_mi8("Low", &on_item8_selected);
-MenuItem mu3_mi8("Back", &on_item8_selected);
 
 void serial_print_help();
 void serial_handler();
@@ -341,26 +240,6 @@ void setup()
 
   /**********************************  menu  ****************************/
   serial_print_help();
-
-  // root level
-  ms.get_root_menu().add_menu(&mu1);
-  // number of items in menu 1
-  mu1.add_item(&mu1_mi1);
-  mu1.add_item(&mu1_mi2);
-  mu1.add_item(&mu1_mi3);
-
-  ms.get_root_menu().add_menu(&mu2);
-  // number of items in menu 2
-  mu2.add_item(&mu2_mi4);
-  mu2.add_item(&mu2_mi5);
-  mu2.add_item(&mu2_mi6);
-
-  ms.get_root_menu().add_menu(&mu3);
-  // number of items in menu 3
-  mu3.add_item(&mu3_mi7);
-  mu3.add_item(&mu3_mi8);
-  ms.get_root_menu();
-  ms.display();
 }
 
 void loop()
@@ -378,7 +257,7 @@ void loop()
   SSWAlarm.loop();  // Update the Bounce instance
   SSWOff.loop();    // Update the Bounce instance
   SSWPump.loop();   // Update the Bounce instance
-  displayMenu();
+
   Update_Display();
   // Alarm();
   // Pump();
@@ -437,7 +316,7 @@ void loop()
 /*************************************************************
  * subs
  * ***********************************************************/
-void displayMenu()
+/* void displayMenu()
 {
 
   OLED_Display.clearDisplay();
@@ -445,116 +324,8 @@ void displayMenu()
   OLED_Display.setTextSize(1);
 
   // Display the menu
-  Menu const *cp_menu = ms.get_current_menu();
-
-  // OLED_Display.println(cp_menu->get_current_component()->get_name());
-
-  /* if (cp_menu->get_name() == NULL)
-  {
-         OLED_Display.setCursor(0, 0);
-  }
-  else
-  {
-    OLED_Display.println(cp_menu->get_name());
-  } */
-
-  for (int i = 0; i < cp_menu->get_num_components(); ++i)
-  {
-    OLED_Display.print(cp_menu->get_menu_component(i)->get_name());
-
-    if (cp_menu->is_current())
-    {
-      OLED_Display.print("*");
-    }
-    OLED_Display.println("");
-  }
-
-  OLED_Display.display();
-
-  /*     for (int i = 0; i < menu.get_num_components(); ++i)
-      {
-        MenuComponent const *cp_m_comp = menu.get_menu_component(i);
-        cp_m_comp->render(*this);
-        // OLED_Display.print(cp_m_comp->get_name());
-        if (cp_m_comp->is_current())
-          OLED_Display.print("*");
-
-        OLED_Display.println("");
-      } */
-}
-
-///////////////////////////////////  menu  //////////////////////////
-// Menu callback function
-void on_item1_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 1 * 9);
-  OLED_Display.print("Item1 Selectd Hi");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-}
-
-void on_item2_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 2 * 9);
-  OLED_Display.print("Item2 Selectd Low");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-}
-void on_item3_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 3 * 9);
-  OLED_Display.print("Item3 Selectd Back");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-  ms.back();
-  ms.display();
-}
-void on_item4_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 2 * 9);
-  OLED_Display.print("Item4 Selectd Hi");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-}
-void on_item5_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 3 * 9);
-  OLED_Display.print("Item5 Selectd Low");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-}
-void on_item6_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 4 * 9);
-  OLED_Display.print("Item6 Selectd Back");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-  ms.back();
-  ms.display();
-}
-void on_item7_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 2 * 9);
-  OLED_Display.print("Item7 Selectd Time");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-}
-void on_item8_selected(MenuComponent *p_menu_component)
-{
-  OLED_Display.setCursor(0, 3 * 9);
-  OLED_Display.print("Item8 Selectd Back");
-  OLED_Display.display();
-  delay(1500); // so we can look the result on the LCD
-  ms.back();
-  ms.display();
-}
-/* void on_item9_selected(MenuComponent *p_menu_component)
-{
-  Serial.println("CL3 Selected");
-  done = true;
 }
  */
-
 void serial_print_help()
 {
   Serial.println("***************");
@@ -588,23 +359,23 @@ void serial_handler()
     switch (inChar)
     {
     case 'w': // Previus item
-      ms.prev();
-      ms.display();
+      // ms.prev();
+      // ms.display();
       break;
 
     case 's': // Next item
-      ms.next();
-      ms.display();
+      // ms.next();
+      // ms.display();
       break;
 
     case 'a': // Back pressed
-      ms.back();
-      ms.display();
+      // ms.back();
+      // ms.display();
       break;
 
     case 'd': // Select pressed
-      ms.select();
-      ms.display();
+      // ms.select();
+      // ms.display();
       break;
 
     case '?':
