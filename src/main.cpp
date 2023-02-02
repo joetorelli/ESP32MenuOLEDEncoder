@@ -4,7 +4,7 @@ esp32
 logger
 sensor
 oled
-test menu function to use in turdfloater
+test MenuSystem.h to use in turdfloater
  */
 #include <Arduino.h>
 #include "Wire.h"
@@ -144,10 +144,10 @@ void pressed(Button2 &btn);
 
 /***********************************  menus  **************************/
 
-volatile int  virtualPosition = 0;
+volatile int virtualPosition = 0;
 #define SELECTED_DISPLAY_DELAY 1500
 // menu renderer
-/* 
+/*
 class MyRenderer : public MenuComponentRenderer
 {
 public:
@@ -207,7 +207,7 @@ public:
 
   //       OLED_Display.println("");
   //       OLED_Display.display();
-  //     } 
+  //     }
   //      // menu.render(*this);
   //     // menu.get_current_component()->render(*this);
 
@@ -220,16 +220,15 @@ public:
 
 
   //   OLED_Display.println( menu.get_current_component()->get_name());
-  // 
+  //
   // OLED_Display.display();
 };
 MyRenderer my_renderer; */
 void displayMenu();
 
-
 // Menu variable
 MyRenderer my_renderer;
-MenuSystem ms(my_renderer);      //(my_renderer);
+MenuSystem ms(my_renderer); //(my_renderer);
 Menu mm("Main Menu");
 Menu mm_mi1("Pump");
 Menu mm_mi2("Alarm");
@@ -253,10 +252,14 @@ MenuItem mu3_mi1("Time", &on_item7_selected);
 // MenuItem mu3_mi8("Low", &on_item8_selected);
 MenuItem mu3_mi2("Back", &on_item8_selected);
 
-boolean menuSelected = false; // no menu item has been selected
-boolean commandReceived = false;// no command has been received (Seria, button, etc)
-enum setMenuSelected_Type { 
-  PUMPMENU, ALARMMENU, CLTIME }; // this enum is in case we want to expand this example
+boolean menuSelected = false;    // no menu item has been selected
+boolean commandReceived = false; // no command has been received (Seria, button, etc)
+enum setMenuSelected_Type
+{
+  PUMPMENU,
+  ALARMMENU,
+  CLTIME
+}; // this enum is in case we want to expand this example
 setMenuSelected_Type setMenu;
 
 byte cursorPosition;
@@ -276,29 +279,30 @@ void on_item8_selected(MenuComponent *p_menu_component); */
 // void on_item9_selected(MenuComponent *p_menu_component);
 
 // Menu callback functions
-void on_item1_selected(MenuItem* p_menu_item) {
+void on_item1_selected(MenuItem *p_menu_item)
+{
   OLED_Display.clearDisplay();
 
-  OLED_Display.setCursor(0,1);
-    OLED_Display.setTextSize(1);
+  OLED_Display.setCursor(0, 1);
+  OLED_Display.setTextSize(1);
   OLED_Display.print("Analog A0: ");
 
-    OLED_Display.setCursor(0,3);
-    OLED_Display.setTextSize(2);
+  OLED_Display.setCursor(0, 3);
+  OLED_Display.setTextSize(2);
 
   OLED_Display.print(analogRead(A0));
   OLED_Display.display();
-    delay(SELECTED_DISPLAY_DELAY);
-
+  delay(SELECTED_DISPLAY_DELAY);
 }
 
-void on_item2_selected(MenuItem* p_menu_item) {
+void on_item2_selected(MenuItem *p_menu_item)
+{
   ledState = !ledState;
-  digitalWrite(led,ledState);
-  OLED_Display.setCursor(0,1);
+  digitalWrite(led, ledState);
+  OLED_Display.setCursor(0, 1);
   OLED_Display.setTextSize(2);
 
-  if(ledState)
+  if (ledState)
   {
     OLED_Display.clearDisplay();
     OLED_Display.print("Led: ON ");
@@ -307,30 +311,27 @@ void on_item2_selected(MenuItem* p_menu_item) {
   {
     OLED_Display.clearDisplay();
     OLED_Display.print("Led: OFF ");
-
   }
   OLED_Display.display();
   delay(SELECTED_DISPLAY_DELAY);
-
 }
 
 // on_back_selected is usefull if you don't have a button to make the back function
-void on_back_selected(MenuItem* p_menu_item) {
+void on_back_selected(MenuItem *p_menu_item)
+{
   ms.back();
 }
 
-void on_time_show_selected(MenuItem* p_menu_item) {
+void on_time_show_selected(MenuItem *p_menu_item)
+{
   OLED_Display.clearDisplay();
-  OLED_Display.setCursor(0,1);
-    OLED_Display.setTextSize(2);
+  OLED_Display.setCursor(0, 1);
+  OLED_Display.setTextSize(2);
 
   OLED_Display.print(dateTime);
   delay(SELECTED_DISPLAY_DELAY);
   OLED_Display.display();
-
 }
-
-
 
 void serial_print_help();
 void serial_handler();
@@ -432,26 +433,26 @@ void setup()
   /**********************************  menu  ****************************/
   serial_print_help();
 
-/*   // root level
-  ms.get_root_menu().add_menu(&mu1);
-  // number of items in menu 1
-  mu1.add_item(&mu1_mi1);
-  mu1.add_item(&mu1_mi2);
-  mu1.add_item(&mu1_mi3);
+  /*   // root level
+    ms.get_root_menu().add_menu(&mu1);
+    // number of items in menu 1
+    mu1.add_item(&mu1_mi1);
+    mu1.add_item(&mu1_mi2);
+    mu1.add_item(&mu1_mi3);
 
-  ms.get_root_menu().add_menu(&mu2);
-  // number of items in menu 2
-  mu2.add_item(&mu2_mi4);
-  mu2.add_item(&mu2_mi5);
-  mu2.add_item(&mu2_mi6);
+    ms.get_root_menu().add_menu(&mu2);
+    // number of items in menu 2
+    mu2.add_item(&mu2_mi4);
+    mu2.add_item(&mu2_mi5);
+    mu2.add_item(&mu2_mi6);
 
-  ms.get_root_menu().add_menu(&mu3);
-  // number of items in menu 3
-  mu3.add_item(&mu3_mi7);
-  mu3.add_item(&mu3_mi8);
-  ms.get_root_menu();
-  ms.display();*/
-    mm.add_item(&mm_mi1, &on_item1_selected);
+    ms.get_root_menu().add_menu(&mu3);
+    // number of items in menu 3
+    mu3.add_item(&mu3_mi7);
+    mu3.add_item(&mu3_mi8);
+    ms.get_root_menu();
+    ms.display();*/
+  mm.add_item(&mm_mi1, &on_item1_selected);
   mm.add_item(&mm_mi2, &on_item2_selected);
   mm.add_menu(&mu1);
   mu1.add_item(&mu1_mi1, &on_time_show_selected);
@@ -459,7 +460,7 @@ void setup()
   mu1.add_item(&mu1_mi3, &on_back_selected);
   ms.set_root_menu(&mm);
   displayMenu();
-} 
+}
 
 void loop()
 {
