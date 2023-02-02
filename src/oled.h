@@ -3,26 +3,29 @@
 #define OLED_H
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
+// #include "Simple_Menu.h"
+//  #include "RTClib.h"
+//  #include "settings.h"
+//  #include "sensor_readings.h"
+//  #include <Adafruit_BME280.h>
+//  #include "SRF.h"
+//  #include "ezTime.h"
+
 #include <Adafruit_GFX.h>
-//#include "RTClib.h"
-//#include "settings.h"
-//#include "sensor_readings.h"
-//#include <Adafruit_BME280.h>
-//#include "SRF.h"
-//#include "ezTime.h"
+#include "Simple_Menu.h"
 
 /******************   OLED_Display  *******************/
-#define SCREEN_WIDTH 128 //  OLED_Display width, in pixels
-#define SCREEN_HEIGHT 32 //  OLED_Display height, in pixels
+//#define SCREEN_WIDTH 128 //  OLED_Display width, in pixels
+//#define SCREEN_HEIGHT 32 //  OLED_Display height, in pixels
 // Configure orientation of the display.
 // 0 = none, 1 = 90 degrees clockwise, 2 = 180 degrees, 3 = 270 degrees CW
-#define ROTATION 0
+//#define ROTATION 0
 
-#define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+//#define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
-//void DisplayLevelSensor(Adafruit_SSD1306 *Disp, LevelSensor *SenLevVal);
-//void DisplayEnvSensor(Adafruit_SSD1306 *Disp, BME_Sensor *SenEnvVal);
-//void DisplaySwitches(Adafruit_SSD1306 *Disp, OLED_SW *SwState);
+// void DisplayLevelSensor(Adafruit_SSD1306 *Disp, LevelSensor *SenLevVal);
+// void DisplayEnvSensor(Adafruit_SSD1306 *Disp, BME_Sensor *SenEnvVal);
+// void DisplaySwitches(Adafruit_SSD1306 *Disp, OLED_SW *SwState);
 
 // void OLED_Time(Adafruit_SSD1306 *Disp, DateTime *RTCClk);
 // void OLED_Date(Adafruit_SSD1306 *Disp, DateTime *RTCClk);
@@ -30,4 +33,10 @@
 
 // void OLED_Range(Adafruit_SSD1306 *Disp, SRFRanges *Rngs);
 // void OLED_Light(Adafruit_SSD1306 *Disp, int LT, LevelSensor *SenLevVal);
+
+void OLED_Print(Adafruit_SSD1306 *Disp, String Text);
+void OLED_PrintLN(Adafruit_SSD1306 *Disp, String Text);
+void OLED_Show(Adafruit_SSD1306 *Disp);
+void OLED_Clr(Adafruit_SSD1306 *Disp);
+void OLED_Cursor(Adafruit_SSD1306 *Disp, int X, int y);
 #endif
