@@ -7,7 +7,7 @@
 --------------------------------------------------------------------------------------------------------------------*/
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
-#include "oled.h"
+//#include "oled.h"
 #include "Simple_Menu.h"
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -218,7 +218,7 @@ void menu::buildmenu(char nodeIndex, Adafruit_SSD1306 *Disp)
       // If on the currently selected node, display a special indicator
       if (i == nodeIndex)
       {
-        // Disp->write("-> ");
+        Disp->write("-> ");
 
         // Serial.print("->");
       }
@@ -515,36 +515,3 @@ void oledSystemInit(Adafruit_SSD1306 *Disp)
   Disp->clearDisplay();
 }
 
-void OLED_Print(Adafruit_SSD1306 *Disp, String Text)
-{
-
-  Disp->print(Text);
-}
-
-void OLED_PrintLN(Adafruit_SSD1306 *Disp, String Text)
-{
-
-  Disp->println(Text);
-}
-void OLED_Show(Adafruit_SSD1306 *Disp)
-{
-
-  Disp->display();
-}
-void OLED_Clr(Adafruit_SSD1306 *Disp)
-{
-
-  Disp->clearDisplay();
-}
-
-void OLED_Cursor(Adafruit_SSD1306 *Disp, int x, int y)
-{
-
-  Disp->setCursor(x, y);
-}
-
-void OLED_Font(Adafruit_SSD1306 *Disp, const GFXfont *x)
-{
-
-  Disp->setFont(x);
-}
