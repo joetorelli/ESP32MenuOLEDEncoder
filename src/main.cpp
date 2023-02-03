@@ -61,7 +61,7 @@ don't have to call the display display. anymore can us any name
 #define ROTARY_ENCODER_B_PIN 15
 #define ROTARY_ENCODER_BUTTON_PIN -1 // button handled by Button2
 #define ROTARY_ENCODER_VCC_PIN -1    /* 27 put -1 of Rotary encoder Vcc is connected directly to 3,3V; else you can use declared output pin for powering rotary encoder */
-#define ROTARY_ENCODER_STEPS 4
+#define ROTARY_ENCODER_STEPS 6
 
 /*********************** button2  **********************/
 // SSW SelectSWitch
@@ -206,7 +206,7 @@ byte PumpPositionFlag = OFF;
 
 boolean MenuUPFlag = OFF;
 boolean MenuDWNFlag = OFF;
-
+int OldENCValue = 0;
 void setup()
 {
 
@@ -637,6 +637,8 @@ void DisplayUpdate(void)
         break;
       case 4: // pump
         Serial.println("Mode 4 = Pump");
+        numberSelector.setRange(0, 2, 1, false, 1);
+        numberSelector.setValue(1);
         PumpMenu.build(&OLED_Display);
         // if (SWEncoderFlag)
         // {
@@ -674,11 +676,39 @@ void DisplayUpdate(void)
 // read rotary encoder
 void NumberSelectorLoop()
 {
-    if (rotaryEncoder->encoderChanged())
+  if (rotaryEncoder->encoderChanged())
+  {
+    ENCValue = numberSelector.getValue();
+    Serial.print(ENCValue);
+    Serial.println(" ");
+  }
+  /*  if (rotaryEncoder->encoderChanged())
+   {
+     ENCValue = numberSelector.getValue();
+     Serial.printf("Enc %d Old %d\n", ENCValue, OldENCValue);
+     if (ENCValue > OldENCValue)
+     {
+
+       PumpMenu.up();
+     }
+
+     if (ENCValue < OldENCValue)
+     {
+
+       PumpMenu.down();
+     }
+   }
+  */
+  /*   if (rotaryEncoder->encoderChanged())
     {
       ENCValue = numberSelector.getValue();
-    }
-  /*   static int OldENCValue;
+      if (PumpPositionFlag)
+      {
+        PumpMenu.nodeIndex = ENCValue;
+
+      }
+    } */
+  /*
     if (rotaryEncoder->encoderChanged())
     {
       ENCValue = numberSelector.getValue();
@@ -693,10 +723,9 @@ void NumberSelectorLoop()
       MenuDWNFlag = ON;
     }
     // Serial.print(ENCValue);
-    // Serial.println(" ");
-    OldENCValue = ENCValue; */
+    // Serial.println(" ");*/
+  OldENCValue = ENCValue;
 }
-
 // read switches
 void pressed(Button2 &btn)
 {
@@ -840,8 +869,8 @@ void pressed(Button2 &btn)
       OLED_Display.clearDisplay();
       OLED_Display.setCursor(0, 0);
       OLED_Display.display(); // main menu
-      numberSelector.setRange(0, 100, 1, false, 1);
-      numberSelector.setValue(50);
+      // numberSelector.setRange(0, 2, 1, false, 1);
+      // numberSelector.setValue(0);
       // mainMenu.addNode("SubM1 Node 4", ACT_NODE, &testFunct);
     }
     else
