@@ -7,7 +7,7 @@
 --------------------------------------------------------------------------------------------------------------------*/
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
-//#include "oled.h"
+// #include "oled.h"
 #include "Simple_Menu.h"
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -289,7 +289,7 @@ void menuFrame::build(Adafruit_SSD1306 *Disp)
 | Date:       December 14,2022
 | Edited:     {Date}
 ----------------------------------------------------------------------------------------------------------------------*/
-void menuFrame::addMenu(char *menuName, char index)
+void menuFrame::addMenu(char *menuName, int index)
 {
   // Ensure that the index is valid within the specified number of menus allowed
   if (index >= 0 && index <= MAX_MENUS)
@@ -352,7 +352,7 @@ void menuFrame::addNode(char *nodeName, char nodeType, void (*functPtr)(void))
 | Date:       December 14,2022
 | Edited:     {Date}
 ----------------------------------------------------------------------------------------------------------------------*/
-void menuFrame::linkNode(char menuNum)
+void menuFrame::linkNode(int menuNum)
 {
   // Add the menu a node directs to
   this->menuList[configIndex].node[nodeLinkIndex].link(menuNum);
@@ -509,9 +509,18 @@ void oledSystemInit(Adafruit_SSD1306 *Disp)
     for (;;)
       ; // Don't proceed, loop forever
   }
+else
+{
+    
+    Disp->clearDisplay();
+    Disp->setCursor(0,0);
+    Disp->println("SSD1306 Init");
+    Disp->display();
+    Serial.println("SSD1306 Init");
+    delay(1000);
 
+}
   Disp->cp437(true); // Use full 256 char 'Code Page 437' font
 
   Disp->clearDisplay();
 }
-

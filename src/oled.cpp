@@ -1,42 +1,55 @@
 #include <Arduino.h>
 #include "OLED.h"
 //#include "settings.h"
-//#include "sensor_readings.h"
+#include "sensor_readings.h"
 
 // read and display button press
-/* void DisplaySwitches(Adafruit_SSD1306 *Disp, OLED_SW *SS)
+
+void DisplaySwitches(Adafruit_SSD1306 *Disp, Select_SW *SS)
 { // line 1
-    Disp->print("ButA:");
-    if (SS->Switch_A == 0)
+    Disp->print("SSA:");
+    if (SS->Switch_Auto == 0)
     {
         Disp->print("0");
     }
     else
     {
-        Disp->print("A");
+        Disp->print("1");
     }
 
-    Disp->print(" ButB:");
-    if (SS->Switch_B == 0)
+    Disp->print(" SSB:");
+    if (SS->Switch_Alarm == 0)
     {
         Disp->print("0");
     }
     else
     {
-        Disp->print("B");
+        Disp->print("1");
     }
 
-    Disp->print(" ButC:");
-    if (SS->Switch_C == 0)
+    Disp->print(" SSC:");
+    if (SS->Switch_Off == 0)
     {
         Disp->print("0");
     }
     else
     {
-        Disp->print("C");
+        Disp->print("1");
+    }
+
+    Disp->print(" SSD:");
+    if (SS->Switch_Pump == 0)
+    {
+        Disp->print("0");
+    }
+    else
+    {
+        Disp->print("1");
     }
 }
- */
+
+
+
 /* void OLED_Time(Adafruit_SSD1306 *Disp, DateTime *RTCClk)
 { // line 2
 
@@ -124,8 +137,8 @@
 
     DEBUGPRINT(SenLevVal->loadvoltage);
     DEBUGPRINT(" loadV mv; ");
-}
- */
+} */
+
 /* void DisplayEnvSensor(Adafruit_SSD1306 *Disp, BME_Sensor *SenEnvVal)
 // Adafruit_BME280 *bme)
 { // line 3

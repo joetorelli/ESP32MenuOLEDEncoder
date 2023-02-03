@@ -10,7 +10,7 @@
 #include <Arduino.h>
 /* #include <Wire.h>
 #include <Adafruit_SSD1306.h>*/
-//#include <Adafruit_GFX.h> 
+// #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 /* #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -108,14 +108,14 @@ public:
   menuNode node[MAX_NODES];
 
   // Keeps track of how many nodes are configured
-  char nodeCount = 0;
+  int nodeCount = 0;
 
   // Stores the parent node that links to the menu for when the "go back" action is called
   char backLink[2];
 
   void addNode(char *nodeName, char nodeType, void (*functPtr)(void));
   void setName(char *namePtr);
-  void buildmenu(char index,Adafruit_SSD1306 *Disp);
+  void buildmenu(char index, Adafruit_SSD1306 *Disp);
 };
 
 /*  ---------------------------------------------------------------------------------------------------------------------/
@@ -143,21 +143,21 @@ public:
   menu menuList[MAX_MENUS];
 
   // Keeps track of the up/down position on the menu
-  char nodeIndex = 0;
+  int nodeIndex = 0;
 
   // Keeps track of the current menu
-  char currentMenu = 0;
+  int currentMenu = 0;
 
   // During configuration, keeps track of the most recently created menu
-  char configIndex = 0;
+  int configIndex = 0;
 
   // During configuration, keeps track of the node most recently created for linking purposes
-  char nodeLinkIndex = 0;
+  int nodeLinkIndex = 0;
 
   void build(Adafruit_SSD1306 *Disp);
-  void addMenu(char *menuName, char index);
+  void addMenu(char *menuName, int index);
   void addNode(char *nodeName, char nodeType, void (*functPtr)(void));
-  void linkNode(char menuNum);
+  void linkNode(int menuNum);
   void up();
   void down();
   void choose();
@@ -169,7 +169,6 @@ public:
 // ------------------  / __/   / /_//  / /\\/ /  / /__     / /      / /   / /_/ /  / /\\/ /   \__ \ ------------------- //
 // -----------------  /_/     /____/  /_/  \_/  /____/    /_/     /___/  /_____/  /_/  \_/  /_____/ ------------------- //
 // -------------------------------------------------------------------------------------------------------------------- //
-
 
 void oledSystemInit(Adafruit_SSD1306 *Disp);
 
