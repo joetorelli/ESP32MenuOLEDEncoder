@@ -1,29 +1,15 @@
-// Testing simple menu
-/*
-
-Modified Simple_Menu.h/.CPP
-so menu can be called from main
-don't have to call the display display. anymore can us any name
 
 
 
-
-
-
-
-*/
-
+/**********************************************
+  Includes
+**********************************************/
 #include <Arduino.h>
+#include <Preferences.h> //NVM
+#include <WiFi.h>
+#include <Ticker.h>
 
-#include <Wire.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_GFX.h>
-#include "oled.h"
-#include "Simple_Menu.h"
-#include "Simple_Menu.h"
-#include "Button2.h"
-#include "AiEsp32RotaryEncoder.h"
-#include "AiEsp32RotaryEncoderNumberSelector.h"
+#include "Wire.h"
 #include "network_config.h"
 
 #include "settings.h"        // The order is important! for nvm
@@ -33,6 +19,16 @@ don't have to call the display display. anymore can us any name
 #include "time.h"
 ////#include <TaskScheduler.h>
 #include "RTClib.h"
+
+#include "OLED.h"
+//#include "SD_Card.h"
+
+#include "Button2.h"
+#include "AiEsp32RotaryEncoder.h"
+#include "AiEsp32RotaryEncoderNumberSelector.h"
+
+// #include <driver/adc.h> //adc
+//#include "INA3221.h"   // included in sensor_READINGS.H
 
 /**********************************************
   Pin Definitions
@@ -95,13 +91,6 @@ byte CLPumpStatus = OFF;  // CLPump On/Off
 byte CLPumpManFlag = OFF; // CLpump sw state
 byte CLPumpRunOnce = OFF; // run CLPump after Pump stops
 
-float SD_interval = 6;              // sec for updating file on sd card
-unsigned int APP_interval = 500;    // ms for updating BT panel
-unsigned int Sensor_interval = 250; // ms for sensor reading
-unsigned int DISP_interval = 250;   // ms for oled disp data update
-float DISP_TimeOut = 15;            // sec how long before blank screen
-float CLPump_RunTime = 5;           // sec for CL Pump to run
-
 /*************************** BT APP Vars ********************/
 int BTStatusFlag = OFF;
 char data_in; // data received from Serial1 link BT
@@ -142,32 +131,123 @@ int CLPumpPlotVal = 0;
 int Page1Once = 1;
 int Page2Once = 0;
 
-Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-void DisplayData(void); // send serial data debug
-// DateTime OLEDClock = rtc.now();
-// void DisplayOn(void); // update disp on start blank timer
-void DisplayUpdate(void);
+/************************ timer vars ************************/
+Ticker SDTimer;         // how often to write to SD Card
+Ticker APPTimer;        // how often to Update BT App
+Ticker SensorTimer;     // how often to Read Sensor
+Ticker DisPlayTimer;    // how often to update OLED
+Ticker DisplayOffTimer; // when to blank display
+Ticker CLPumpTimer;     // how long to run CLPump
+
+float SD_interval = 6;              // sec for updating file on sd card
+unsigned int APP_interval = 500;    // ms for updating BT panel
+unsigned int Sensor_interval = 250; // ms for sensor reading
+unsigned int DISP_interval = 250;   // ms for oled disp data update
+float DISP_TimeOut = 15;            // sec how long before blank screen
+float CLPump_RunTime = 5;           // sec for CL Pump to run
 
 /**************************** Switches ****************************/
 struct Select_SW Switch_State; // switch position
 byte SWEncoderFlag = OFF;      // encoder push button
-// byte SSWMode = 0;              // position of select switch and encoder
-int SSWMode = 1;
+byte SSWMode = 0;              // position of select switch and encoder
+
+/****************** misc vars ********************/
+double Count = 0;            // used for log save count
+boolean SDConnectOK = ON;    // SD card valid
+boolean WiFiConnected = OFF; // WIFI Connected
+byte SetUpFlag = 0;          ///////////////// oled menu inwork
+
+/******************* eeprom ******************/
+Preferences Settings; // NVM
+
+/**********************************************************************
+*******************  Sub/Function Declarations
+**********************************************************************/
+
+/******/ //void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal);
+
+void Alarm(void);     // alarm control auto/man & on/off
+void Pump(void);      // pump control auto/man & on/off
+void CLPump(void);    // CLpump control on sets timer for off
+void CLPumpOFF(void); // CLPump off
+
+void BuildPanel(void); // builds app panels on phone
+
+void DisplayData(void); // send serial data debug
+// DateTime OLEDClock = rtc.now();
+
+void SystemSetUp(void); /////////////////// oled menu
+
+/********  ticker timers callback functions  *********/
+void DisplayUpdate(void);        // update oled data
+void DisplayUpdateSetFlag(void); // set flag to run display update
+boolean DisplayUpdateFlag = ON;  // update flag
+
+void DisplayOff(void);        // blanks disp
+void DisplayOffSetFlag();     // set flag to run displayoff
+boolean DisplayOffFlag = OFF; // update flag
+
+void DisplayOn(void); // update disp on start blank timer
+
+void SD_Update();           // write to sd file
+void SD_UpdateSetFlag();    // set flag to run SD update
+boolean SDUpdateFlag = OFF; // update flag
+
+void SensorRead();            // read sensor value
+void SensorReadSetFlag();     // set flag to run sd update
+boolean SensorReadFlag = OFF; // update flag
+
+void SendAppData();            // send data to app
+void SendAppDataSetFlag();     // set flag to run app update
+boolean SendAppDataFlag = OFF; // update flag
+
+/*************************************************************************
+ ********************** Init Hardware
+ ************************************************************************/
+
+/*******************   oled display   **************/
+// Declaration for an SSD1306 OLED_Display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 OLED_Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+/*******************  rtc  *************************/
+RTC_PCF8523 rtc; // on feather logger board
+
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+const char *ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = -6 * 60 * 60;
+const int daylightOffset_sec = 0; // DISPTimeOut;
+struct tm timeinfo;
+
+/**********************  ina3221  ********************/
+// #include "SDL_Arduino_INA3221.h"
+static const uint8_t _INA_addr = 64; //  0x40 I2C address of sdl board
+
+// tweeked the resistor value while measuring the current (@11.5ma center of 4-20ma) with a meter. To make the numbers very close.
+// with sig gen
+// ina3221(address, chan1 shunt miliohm, chan2 shunt miliohm, chan3 shunt miliohm)
+/******/ //SDL_Arduino_INA3221 ina3221(_INA_addr, 6205, 7530, 8220); // 6170, 7590, 8200);
+// the 7.5ohm resistor works out he best. Shunt mv=~30-150, max out of register at 163.8mv.
+//  this leaves some head room for when sensor fails and goes max
+//  need to add test condition for <4ma(open) and >20ma (fault)
+struct LevelSensor Sensor_Level_Values;
+// values for 3 chan
+
 /***********************  encoder  *********************/
 // AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
 AiEsp32RotaryEncoder *rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
 AiEsp32RotaryEncoderNumberSelector numberSelector = AiEsp32RotaryEncoderNumberSelector();
-
-
-//void rotary_onButtonClick();
-//void rotary_loop();
+// void rotary_onButtonClick();
+// void rotary_loop();
 void NumberSelectorLoop();
 int ENCValue = 0;
-/********************* encoder ISR  *********************/
 
+void RotaryGroup(void);
+
+/********************* encoder ISR  *********************/
 void IRAM_ATTR readEncoderISR()
 {
-    rotaryEncoder->readEncoder_ISR();
+  // rotaryEncoder.readEncoder_ISR();    //old
+  rotaryEncoder->readEncoder_ISR();
 }
 
 /*******************  switches **************************/
@@ -188,31 +268,21 @@ void pressed(Button2 &btn); // when button/sw pressed
 // byte myButtonStateHandler();
 // void myTapHandler(Button2 &btn);
 
-// void DisplayData(void); // send serial data debug
-//  DateTime OLEDClock = rtc.now();
-void testFunct();
-void PumpHiAdjust();
-void PumpLowAdjust();
-void AlarmHiAdjust();
-void AlarmLowAdjust();
-void CLTimeAdjust();
-void VolumeAdjust();
-void MenuBack();
-void PumpChoose();
 
-menuFrame AlarmMenu;
-menuFrame PumpMenu;
-byte AlarmPositionFlag = OFF;
-byte OffPositionFlag = OFF;
-byte PumpPositionFlag = OFF;
 
-boolean MenuUPFlag = OFF;
-boolean MenuDWNFlag = OFF;
-int OldENCValue = 0;
+/******************************************************************************
+ **************************************  SetUp
+ *******************************************************************************/
 void setup()
 {
+    Serial.begin(57600);
 
-  Serial.begin(57600);
+
+ // serial ports
+  Serial1.begin(9600); // bluetooth mod   needs to be 19200
+  Serial.begin(57600); // debug
+  DEBUGPRINTLN("Serial 0 Start");
+
   /***************************** pin properties  ******************/
   // relay
   pinMode(AlarmPin, OUTPUT);
@@ -233,685 +303,77 @@ void setup()
   digitalWrite(PumpPin, OFF);
   digitalWrite(CLPumpPin, OFF);
 
+  /********************   init i2c  *****************/
+  Wire.begin(I2c_SDA, I2c_SCL);
+  // bool status; // connect status
+  DEBUGPRINTLN("I2C INIT OK");
+
   /********************* oled  ********************/
   // SSD1306_SWITCHCAPVCC = generate OLED_Display voltage from 3.3V internally
-  /*   if (!OLED_Display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) // Address 0x3C for 128x32 board
-    {
-      Serial.println(F("SSD1306 allocation failed"));
-      for (;;)
-        ; // Don't proceed, loop forever
-    }
-    else
-    {
-      Serial.println("SSD1306 Init");
-      OLED_Display.clearDisplay();
-      OLED_Display.setCursor(0,0);
-      OLED_Display.println("SSD1306 Init");
-      OLED_Display.display();
-      delay(1000);
+  if (!OLED_Display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) // Address 0x3C for 128x32 board
+  {
+    DEBUGPRINTLN(F("SSD1306 allocation failed"));
+    for (;;)
+      ; // Don't proceed, loop forever
+  }
+  else
+  {
+    DEBUGPRINTLN("SSD1306 Init");
+  }
 
-    } */
-  oledSystemInit(&OLED_Display);
+  // Clear the oled buffer.
+  OLED_Display.clearDisplay();
+  OLED_Display.display();
+
+  // set up parameters
+  OLED_Display.setRotation(ROTATION);
+  OLED_Display.setTextSize(1);
+  OLED_Display.setTextColor(SSD1306_WHITE);
 
 
   /******************* encoder  *********************/
-    rotaryEncoder->begin();
-    rotaryEncoder->setup(readEncoderISR);
-    numberSelector.attachEncoder(rotaryEncoder);
-
-
-
-
-
+  rotaryEncoder->begin();
+  rotaryEncoder->setup(readEncoderISR);
+  rotaryEncoder->setAcceleration(1);
+  numberSelector.attachEncoder(rotaryEncoder);
   // example 1
-  numberSelector.setRange(0, 2, 1, false, 0);
-  numberSelector.setValue(50);
+  numberSelector.setRange(0, 2, 1, false, 1);
+  numberSelector.setValue(2);
+
+    /*
+    numberSelector.setRange parameters:
+        float minValue,                set minimum value for example -12.0
+        float maxValue,                set maximum value for example 31.5
+        float step,                    set step increment, default 1, can be smaller steps like 0.5 or 10
+        bool cycleValues,              set true only if you want going to miminum value after maximum 
+        unsigned int decimals = 0      precision - how many decimal places you want, default is 0
+
+    numberSelector.setValue - sets initial value    
+    */
 
 
-  // encoder switch
-  SWEncoder.begin(SWEncoderPin, INPUT_PULLUP);
-  // SWEncoder.setLongClickTime(1000);
-  SWEncoder.setDebounceTime(25);
-
-  // SWEncoder.setChangedHandler(changed);             // trigger on press and release
-  SWEncoder.setPressedHandler(pressed); // returns if still pressed
-
-  /******************************** rotary select sw *************************/
-  SSWAuto.begin(SSWAutoPin, INPUT_PULLUP);
-  SSWAuto.setDebounceTime(25);
-  // SSWAuto.setClickHandler(handler);                // bad with rotary
-  //  SSWAuto.setLongClickDetectedHandler(handler);   // works good always thinks long
-  // SSWAuto.setChangedHandler(changed);              // give current and next position
-  SSWAuto.setPressedHandler(pressed); // works good with rotary
-
-  SSWAlarm.begin(SSWAlarmPin, INPUT_PULLUP);
-  SSWAlarm.setDebounceTime(25);
-  // SSWAlarm.setClickHandler(handler);
-  // SSWAlarm.setLongClickDetectedHandler(handler);
-  // SSWAlarm.setChangedHandler(changed);
-  SSWAlarm.setPressedHandler(pressed);
-
-  SSWOff.begin(SSWOffPin, INPUT_PULLUP);
-  SSWOff.setDebounceTime(25);
-  // SSWOff.setClickHandler(handler);
-  // SSWOff.setLongClickDetectedHandler(handler);
-  // SSWOff.setChangedHandler(changed);
-  SSWOff.setPressedHandler(pressed);
-  // SSWOff.setReleasedHandler(released);
-  // SSWOff.setTapHandler(tap);
-
-  SSWPump.begin(SSWPumpPin, INPUT_PULLUP);
-  SSWPump.setDebounceTime(25);
-  // SSWPump.setClickHandler(handler);
-  // SSWPump.setLongClickDetectedHandler(handler);
-  // SSWPump.setChangedHandler(changed);
-  SSWPump.setPressedHandler(pressed);
-
-  /********************  menu ********************/
-  // oledSystemInit(&OLED_Display);
-  /*
-    // Main menu
-    //mainMenu.addMenu("SetUp", 0);
-    //mainMenu.addNode("Pump Levels", SUB_NODE, NULL);
-    //mainMenu.linkNode(1);
-
-    mainMenu.addNode("Alarm Levels", SUB_NODE, NULL);
-    mainMenu.linkNode(2);
-
-    mainMenu.addNode("CL Timer", SUB_NODE, NULL);
-    mainMenu.linkNode(3);
-
-    mainMenu.addNode("Volume", SUB_NODE, NULL);
-    mainMenu.linkNode(4);
-
-    // // Submenu 1
-    // mainMenu.addMenu("Pump mm", 1);
-    // mainMenu.addNode("High mm", ACT_NODE, &PumpHiAdjust);
-    // mainMenu.addNode("Low", ACT_NODE, &PumpLowAdjust);
-    // mainMenu.addNode("Back", ACT_NODE, &MenuBack);
-    // // mainMenu.addNode("SubM1 Node 4", ACT_NODE, &testFunct);
-
-    // Submenu 2
-    mainMenu.addMenu("Alarm mm", 2);
-    mainMenu.addNode("High mm", ACT_NODE, &AlarmHiAdjust);
-    mainMenu.addNode("Low", ACT_NODE, &AlarmLowAdjust);
-    mainMenu.addNode("Back", ACT_NODE, &MenuBack);
-    // mainMenu.addNode("SubM2 Node 4", ACT_NODE, &testFunct);
-    // mainMenu.addNode("SubM2 Node 5", ACT_NODE, &testFunct);
-
-    // Submenu 3
-    mainMenu.addMenu("CL Timer", 3);
-    mainMenu.addNode("Time Sec", ACT_NODE, &CLTimeAdjust);
-    mainMenu.addNode("Back", ACT_NODE, &MenuBack);
-    // mainMenu.addNode("SubM3 Node 4", ACT_NODE, &testFunct);
-    // mainMenu.addNode("SubM3 Node 5", ACT_NODE, &testFunct);
-    // mainMenu.addNode("SubM3 Node 6", ACT_NODE, &testFunct);
-
-    // Submenu 4
-    mainMenu.addMenu("Volume", 4);
-    mainMenu.addNode("Vol %", ACT_NODE, &VolumeAdjust);
-    mainMenu.addNode("Back", ACT_NODE, &testFunct);
-    // mainMenu.addNode("SubM3 Node 4", ACT_NODE, &testFunct);
-    // mainMenu.addNode("SubM3 Node 5", ACT_NODE, &testFunct);
-    // mainMenu.addNode("SubM3 Node 6", ACT_NODE, &testFunct); */
-  PumpMenu.addMenu("Pump", 0);
-  // mainMenu.addNode("Pump Levels", SUB_NODE, NULL);
-  //  mainMenu.linkNode(1);
-  //  // Submenu 1
-  //  mainMenu.addMenu("Pump mm", 1);
-  PumpMenu.addNode("High mm", ACT_NODE, &PumpHiAdjust);
-  PumpMenu.addNode("Low", ACT_NODE, &PumpLowAdjust);
-  PumpMenu.addNode("ON/OFF", ACT_NODE, &MenuBack);
-  AlarmMenu.addMenu("Alarm", 0);
-  // mainMenu.addNode("Pump Levels", SUB_NODE, NULL);
-  //  mainMenu.linkNode(1);
-  //  // Submenu 1
-  //  mainMenu.addMenu("Pump mm", 1);
-  AlarmMenu.addNode("High mm", ACT_NODE, &PumpHiAdjust);
-  AlarmMenu.addNode("Low", ACT_NODE, &PumpLowAdjust);
-  AlarmMenu.addNode("ON/OFF", ACT_NODE, &MenuBack);
 }
 
-/**************************************************************************/
-/*****************************  loop  **********************************/
 void loop()
 {
-  // mainMenu.build(&OLED_Display);
-  /******************  encoder  ********************/
-  // numberselector style
-  //NumberSelectorLoop();
+
+RotaryGroup();
+}
+
+void RotaryGroup()
+{
+
     if (rotaryEncoder->encoderChanged())
     {
         Serial.print(numberSelector.getValue());
         Serial.println(" ");
     }
-  /*********************** Read Switches **********************/
-  SWEncoder.loop(); // Update Encoder Switch instance
-  SSWAuto.loop();   // Update Select Switch Auto Position instance
-  SSWAlarm.loop();  // Update Select Switch Alarm Position instance
-  SSWOff.loop();    // Update Select Switch Off Position instance
-  SSWPump.loop();   // Update Select Switch Pump Position instance
 
-  if (Serial.available())
-  {
-    switch (Serial.read())
+    if (rotaryEncoder->isEncoderButtonClicked())
     {
-    case 'u': // up
-
-      switch (SSWMode)
-      {
-      case 3: // alarm position
-        // AlarmMenu.up();
-        break;
-      case 4: // pump position
-        PumpMenu.up();
-        break;
-      }
-      break;
-
-    case 'd':
-
-      switch (SSWMode)
-      {
-      case 3:
-        // AlarmMenu.down();
-        break;
-      case 4:
-        PumpMenu.down();
-        break;
-      }
-      break;
-
-    case 'c':
-
-      switch (SSWMode)
-      {
-      case 3:
-        // AlarmMenu.choose();
-        break;
-      case 4:
-        PumpMenu.choose();
-        break;
-      }
-      break;
-
-    case 'b':
-      // Need to backlink nodes to menus with another variable "linkedNode"
-
-      switch (SSWMode)
-      {
-      case 3:
-        // AlarmMenu.back();
-        break;
-      case 4:
-        PumpMenu.back();
-        break;
-      }
-      break;
-
-    default:
-
-      break;
-    }
-  }
-
-  DisplayUpdate();
-  //delay(100);
-}
-
-/*************************************************************/
-/*********************  subs  ********************************/
-void PumpChoose(void)
-{
-
-  PumpMenu.choose();
-}
-void PumpHiAdjust()
-{
-
-  /*
-  Cls
-  Title Pump large font
-  Next line High in Large font
-  Next Line Value in large
-  rotate value change
-  press to accept and menu back
-  */
-
-  OLED_Display.clearDisplay();
-  OLED_Display.print("Inside Pump HI Adj");
-  OLED_Display.display();
-  ;
-
-  delay(1000);
-}
-void PumpLowAdjust()
-{
-
-  OLED_Display.clearDisplay();
-  OLED_Display.print("Inside Pump LOW Adj");
-  OLED_Display.display();
-  delay(1000);
-}
-void AlarmHiAdjust()
-{
-  OLED_Display.clearDisplay();
-  OLED_Display.print("Inside AlarmHI Adj");
-  OLED_Display.display();
-  delay(1000);
-}
-void AlarmLowAdjust()
-{
-  OLED_Display.clearDisplay();
-  OLED_Display.print("Inside AlarmLOW Adj");
-  OLED_Display.display();
-  delay(1000);
-}
-void CLTimeAdjust()
-{
-  /*
-    Cls
-  Title large font
-  Next line Time in Large font
-  Next Line Value in large
-  rotate value change
-  press to accept and menu back
-
-
-  */
-  OLED_Display.clearDisplay();
-  OLED_Display.print("Inside CLTime Adj");
-  OLED_Display.display();
-  delay(1000);
-}
-void VolumeAdjust()
-{
-
-  // same as cl
-  OLED_Display.clearDisplay();
-  OLED_Display.print("Inside Volume Adj");
-  OLED_Display.display();
-  delay(1000);
-}
-void MenuBack()
-{
-
-  // go back a level
-  PumpMenu.back();
-}
-
-void testFunct()
-{
-  Serial.println("Function successfully called");
-}
-
-// send data to oled
-void DisplayUpdate(void)
-{
-
-  /////////////////////////////////////////////debug
-  BTStatusFlag = OFF;
-  DisplayState = ON;
-  AutoManControl = OFF;
-  // SSWMode = 1;
-
-  // Serial.println("DisplayUpdate()");
-  if (BTStatusFlag == ON) // mode sw to auto BT ON
-  {
-    // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=ON");
-    OLED_Display.clearDisplay();
-    OLED_Display.setCursor(0, 0);
-    OLED_Display.println("*** BT Connected! ***");
-
-    ////////////////////////////////////DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
-    // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
-    // OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
-    OLED_Display.printf("Pump: %d\n", PumpStatus);
-    OLED_Display.printf(" On: %d Off: %d\n", PumpOnLevel, PumpOffLevel);
-    OLED_Display.printf("Alarm: %d\n", AlarmStatus);
-    OLED_Display.printf(" On: %d Off: %d\n", AlarmOnLevel, AlarmOffLevel);
-    OLED_Display.printf("CLPmp: %d\n", CLPumpStatus);
-    int x = CLPump_RunTime;
-    OLED_Display.printf(" RunTime: %d \n", x);
-
-    OLED_Display.display();
-    return;
-  }
-
-  if (DisplayState == ON)
-  {
-    // Serial.println("DisplayUpdate() / DisplayState=ON");
-    if (BTStatusFlag == OFF) //  BT OFF
-    {
-      // Serial.println("DisplayUpdate() / DisplayState=ON / BTStatusFlag=OFF");
-      switch (SSWMode)
-      {
-      case 0: // encoder sw
-        if (PumpPositionFlag && SWEncoderFlag)
-        {
-          PumpMenu.choose();
-          SWEncoderFlag = OFF;
-          SSWMode = 4;
-        }
-        /*         OLED_Display.clearDisplay();
-                OLED_Display.setCursor(0, 0);
-                OLED_Display.print("Mode 0 = Encoder");
-                OLED_Display.display();
-                Serial.println("Mode 0 = Encoder");
-                // if Blanked and in auto Mode, when Encoder switch pressed it will turn on and update display
-                if (AutoManControl)
-                {
-
-                  OLED_Display.clearDisplay();
-                  OLED_Display.setCursor(0, 0);
-
-                  // ///////////////////// cut DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
-                  // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
-
-                  // ///////////////////// cut OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
-
-                  OLED_Display.display();
-                } */
-
-        break;
-
-      case 1: // auto
-
-        OLED_Display.clearDisplay();
-        OLED_Display.setCursor(0, 0);
-
-        // //////////////////////////////////// cut DisplayLevelSensor(&OLED_Display, &Sensor_Level_Values);
-        // DisplayEnvSensor(&OLED_Display, &Sensor_Env_Values);
-
-        //////////////////////////////////////// cut OLED_Light(&OLED_Display, Count, &Sensor_Level_Values);
-        OLED_Display.print("Mode 1 = Auto");
-        OLED_Display.display();
-        Serial.println("Mode 1 = Auto");
-        break;
-
-      case 2: // mode sw alarm
-
-        OLED_Display.clearDisplay();
-        OLED_Display.setCursor(0, 0);
-
-        OLED_Display.print("Mode 2 = Alarm");
-        OLED_Display.display();
-        Serial.println("Mode 2 = Alarm");
-        break;
-
-      case 3: // off /setup
-        OLED_Display.clearDisplay();
-        OLED_Display.setCursor(0, 0);
-
-        OLED_Display.println("Mode 3 = SetUp");
-
-        OLED_Display.display();
-        Serial.println("Mode 3 = Setup");
-        break;
-      case 4: // pump
-        //Serial.println("Mode 4 = Pump");
-        numberSelector.setRange(0, 2, 1, false, 1);
-        numberSelector.setValue(1);
-        //PumpMenu.build(&OLED_Display);
-        // if (SWEncoderFlag)
-        // {
-        //   Serial.println("                PumpMenuChoose");
-        //   PumpChoose();
-        //   SWEncoderFlag = OFF;
-        // }
-
-        break;
-      default:
-        OLED_Display.clearDisplay();
-        OLED_Display.setCursor(0, 0);
-
-        OLED_Display.print("Default = Bad");
-        OLED_Display.display();
-        Serial.println("Default ModeSW DisplayUpdate");
-
-        break;
-      }
-    }
-  }
-  else // blank display
-  {
-    // Serial.println("DisplayUpdate() / DisplayState=OFF");
-    // if (BTStatusFlag == ON)
-    // {
-    // OLED_Display.clearDisplay();
-    // OLED_Display.setCursor(0, 0);
-    // // OLED_Display.println("BT Connected! DisplayStateOFF");
-    // OLED_Display.display();
-    // }
-  }
-}
-
-// read rotary encoder
-void NumberSelectorLoop()
-{
-/*   if (rotaryEncoder->encoderChanged())
-  {
-    Serial.print(numberSelector.getValue());
-    Serial.println("NumberSelectorGetValue ");
-    //Serial.println(" ");
-  } */
-
-  if (rotaryEncoder->encoderChanged())
-  {
-    ENCValue = numberSelector.getValue();
-    Serial.print(ENCValue);
-    Serial.println(" ");
-  }
-  /*  if (rotaryEncoder->encoderChanged())
-   {
-     ENCValue = numberSelector.getValue();
-     Serial.printf("Enc %d Old %d\n", ENCValue, OldENCValue);
-     if (ENCValue > OldENCValue)
-     {
-
-       PumpMenu.up();
-     }
-
-     if (ENCValue < OldENCValue)
-     {
-
-       PumpMenu.down();
-     }
-   }
-  */
-  /*   if (rotaryEncoder->encoderChanged())
-    {
-      ENCValue = numberSelector.getValue();
-      if (PumpPositionFlag)
-      {
-        PumpMenu.nodeIndex = ENCValue;
-
-      }
-    } */
-  /*
-    if (rotaryEncoder->encoderChanged())
-    {
-      ENCValue = numberSelector.getValue();
-      if (PumpPositionFlag)
-      {
-        PumpMenu.nodeIndex = ENCValue;
-        PumpMenu.
-      }
-    }
-    if (ENCValue < OldENCValue)
-    {
-      MenuDWNFlag = ON;
-    }
-    // Serial.print(ENCValue);
-    // Serial.println(" ");*/
-  // OldENCValue = ENCValue;
-}
-
-/* void rotary_loop()
-{
-  // dont print anything unless value changed
-  if (rotaryEncoder->encoderChanged())
-  {
-    Serial.print("Value: ");
-    Serial.println(rotaryEncoder->readEncoder());
-  }
-  if (rotaryEncoder->isEncoderButtonClicked())
-  {
-    //rotary_onButtonClick();
-  }
-}
- */
-// read switches
-void pressed(Button2 &btn)
-{
-  ////////////////////////////////////// debug
-  DisplayState = ON;
-  /*****************************************************************************
-   * *****************  temp  ***************************************************
-   * *************************************************************************
-  // btn = SSWAuto;
-
-          PumpStatus = OFF;
-        PumpManFlag = OFF;
-        AlarmStatus = OFF;
-        AlarmManFlag = OFF;
-        CLPumpStatus = OFF;
-      CLPumpManFlag = OFF;
-  ******************************/
-
-  // Serial.print("pressed ");
-  //  if (DisplayState == OFF)
-  //  {
-  //    Serial.println("SWEncoder DispON ");
-  //    // DisplayOn();
-  //    DisplayState = ON;
-  //    DisplayUpdate();
-  //  }
-  if (btn == SWEncoder)
-  {
-
-    SSWMode = 0;
-
-    Serial.printf("SWEncoder Mode %d", SSWMode);
-
-    if (DisplayState == OFF)
-    {
-      // Serial.println("SWEncoder DispON ");
-      ////////////////////////////////////// cut DisplayOn();
-      // DisplayState = ON;
-      // DisplayUpdate();
-    }
-    else
-    {
-      Serial.println("SWEncoderFlag ");
-      SWEncoderFlag = ON;
-    }
-  }
-
-  // look at switch when BT NOT connected
-  if (BTStatusFlag == OFF)
-  {
-    if (btn == SSWAuto)
-    {
-      // Serial.println("SSWAuto");
-
-      if (SSWMode != 1)
-      {
-
-        ///////////////////////// cut DisplayOn();
-        // DisplayState = ON;
-        // DisplayUpdate();
-      }
-      SSWMode = 1;
-
-      PumpPositionFlag = OFF;
-      AlarmPositionFlag = OFF;
-      OffPositionFlag = OFF;
-
-      AutoManControl = ON;
-      // DisplayState = ON;
-    }
-    else if (btn == SSWAlarm)
-    {
-      // Serial.println("SSWAlarm");
-      SSWMode = 2;
-
-      PumpPositionFlag = OFF;
-      AlarmPositionFlag = ON;
-      OffPositionFlag = OFF;
-
-      PumpManFlag = OFF;
-      AlarmManFlag = ON;
-
-      AutoManControl = OFF;
-
-      if (DisplayState == OFF)
-      {
-        // DisplayOn();
-        DisplayState = ON;
-        DisplayUpdate();
-      }
+        Serial.print("Selected value is ");
+        Serial.print(numberSelector.getValue(), 1);
+        Serial.println(" ***********************");
     }
 
-    else if (btn == SSWOff)
-    {
-      // Serial.println("SSWOff");
-      SSWMode = 3;
-
-      PumpPositionFlag = OFF;
-      AlarmPositionFlag = OFF;
-      OffPositionFlag = ON;
-
-      PumpManFlag = OFF;
-      AlarmManFlag = OFF;
-
-      AutoManControl = OFF;
-
-      if (DisplayState == OFF)
-      {
-        // DisplayOn();
-        DisplayState = ON;
-        DisplayUpdate();
-      }
-      // SystemSetUp();
-      /*     if (SWEncoderFlag == ON)
-                {
-                  SetUpFlag = 1;
-                  SWEncoderFlag = OFF;
-                  SystemSetUp();
-                } */
-    }
-    else if (btn == SSWPump)
-    {
-      // Serial.println("SSWPump");
-      SSWMode = 4;
-
-      PumpPositionFlag = ON;
-      AlarmPositionFlag = OFF;
-      OffPositionFlag = OFF;
-
-      PumpManFlag = ON;
-      AlarmManFlag = OFF;
-
-      AutoManControl = OFF;
-
-      // if (DisplayState == OFF)
-      // {
-      //   // DisplayOn();
-      //   DisplayState = ON;
-      //   DisplayUpdate();
-      // }
-      OLED_Display.clearDisplay();
-      OLED_Display.setCursor(0, 0);
-      OLED_Display.display(); // main menu
-      // numberSelector.setRange(0, 2, 1, false, 1);
-      // numberSelector.setValue(0);
-      // mainMenu.addNode("SubM1 Node 4", ACT_NODE, &testFunct);
-    }
-    else
-    {
-      // Serial.println("no button");
-      // //SSWMode = 0;
-    }
-  }
 }
