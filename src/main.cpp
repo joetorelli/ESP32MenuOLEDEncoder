@@ -61,7 +61,7 @@ don't have to call the display display. anymore can us any name
 #define ROTARY_ENCODER_B_PIN 15
 #define ROTARY_ENCODER_BUTTON_PIN -1 // button handled by Button2
 #define ROTARY_ENCODER_VCC_PIN -1    /* 27 put -1 of Rotary encoder Vcc is connected directly to 3,3V; else you can use declared output pin for powering rotary encoder */
-#define ROTARY_ENCODER_STEPS 6
+#define ROTARY_ENCODER_STEPS 4
 
 /*********************** button2  **********************/
 // SSW SelectSWitch
@@ -157,15 +157,17 @@ int SSWMode = 1;
 // AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
 AiEsp32RotaryEncoder *rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN, ROTARY_ENCODER_STEPS);
 AiEsp32RotaryEncoderNumberSelector numberSelector = AiEsp32RotaryEncoderNumberSelector();
-// void rotary_onButtonClick();
-// void rotary_loop();
+
+
+//void rotary_onButtonClick();
+//void rotary_loop();
 void NumberSelectorLoop();
 int ENCValue = 0;
 /********************* encoder ISR  *********************/
+
 void IRAM_ATTR readEncoderISR()
 {
-  // rotaryEncoder.readEncoder_ISR();    //old
-  rotaryEncoder->readEncoder_ISR();
+    rotaryEncoder->readEncoder_ISR();
 }
 
 /*******************  switches **************************/
@@ -250,14 +252,21 @@ void setup()
 
     } */
   oledSystemInit(&OLED_Display);
+
+
   /******************* encoder  *********************/
-  rotaryEncoder->begin();
-  rotaryEncoder->setup(readEncoderISR);
-  rotaryEncoder->setAcceleration(1);
-  numberSelector.attachEncoder(rotaryEncoder);
+    rotaryEncoder->begin();
+    rotaryEncoder->setup(readEncoderISR);
+    numberSelector.attachEncoder(rotaryEncoder);
+
+
+
+
+
   // example 1
-  numberSelector.setRange(0, 100, 1, false, 1);
+  numberSelector.setRange(0, 2, 1, false, 0);
   numberSelector.setValue(50);
+
 
   // encoder switch
   SWEncoder.begin(SWEncoderPin, INPUT_PULLUP);
@@ -352,15 +361,15 @@ void setup()
   //  mainMenu.addMenu("Pump mm", 1);
   PumpMenu.addNode("High mm", ACT_NODE, &PumpHiAdjust);
   PumpMenu.addNode("Low", ACT_NODE, &PumpLowAdjust);
-  PumpMenu.addNode("Back", ACT_NODE, &MenuBack);
-  AlarmMenu.addMenu("Pump", 0);
+  PumpMenu.addNode("ON/OFF", ACT_NODE, &MenuBack);
+  AlarmMenu.addMenu("Alarm", 0);
   // mainMenu.addNode("Pump Levels", SUB_NODE, NULL);
   //  mainMenu.linkNode(1);
   //  // Submenu 1
   //  mainMenu.addMenu("Pump mm", 1);
   AlarmMenu.addNode("High mm", ACT_NODE, &PumpHiAdjust);
   AlarmMenu.addNode("Low", ACT_NODE, &PumpLowAdjust);
-  AlarmMenu.addNode("Back", ACT_NODE, &MenuBack);
+  AlarmMenu.addNode("ON/OFF", ACT_NODE, &MenuBack);
 }
 
 /**************************************************************************/
@@ -370,8 +379,12 @@ void loop()
   // mainMenu.build(&OLED_Display);
   /******************  encoder  ********************/
   // numberselector style
-  NumberSelectorLoop();
-
+  //NumberSelectorLoop();
+    if (rotaryEncoder->encoderChanged())
+    {
+        Serial.print(numberSelector.getValue());
+        Serial.println(" ");
+    }
   /*********************** Read Switches **********************/
   SWEncoder.loop(); // Update Encoder Switch instance
   SSWAuto.loop();   // Update Select Switch Auto Position instance
@@ -443,7 +456,7 @@ void loop()
   }
 
   DisplayUpdate();
-  delay(100);
+  //delay(100);
 }
 
 /*************************************************************/
@@ -636,10 +649,10 @@ void DisplayUpdate(void)
         Serial.println("Mode 3 = Setup");
         break;
       case 4: // pump
-        Serial.println("Mode 4 = Pump");
+        //Serial.println("Mode 4 = Pump");
         numberSelector.setRange(0, 2, 1, false, 1);
         numberSelector.setValue(1);
-        PumpMenu.build(&OLED_Display);
+        //PumpMenu.build(&OLED_Display);
         // if (SWEncoderFlag)
         // {
         //   Serial.println("                PumpMenuChoose");
@@ -676,6 +689,13 @@ void DisplayUpdate(void)
 // read rotary encoder
 void NumberSelectorLoop()
 {
+/*   if (rotaryEncoder->encoderChanged())
+  {
+    Serial.print(numberSelector.getValue());
+    Serial.println("NumberSelectorGetValue ");
+    //Serial.println(" ");
+  } */
+
   if (rotaryEncoder->encoderChanged())
   {
     ENCValue = numberSelector.getValue();
@@ -724,8 +744,23 @@ void NumberSelectorLoop()
     }
     // Serial.print(ENCValue);
     // Serial.println(" ");*/
-  OldENCValue = ENCValue;
+  // OldENCValue = ENCValue;
 }
+
+/* void rotary_loop()
+{
+  // dont print anything unless value changed
+  if (rotaryEncoder->encoderChanged())
+  {
+    Serial.print("Value: ");
+    Serial.println(rotaryEncoder->readEncoder());
+  }
+  if (rotaryEncoder->isEncoderButtonClicked())
+  {
+    //rotary_onButtonClick();
+  }
+}
+ */
 // read switches
 void pressed(Button2 &btn)
 {
