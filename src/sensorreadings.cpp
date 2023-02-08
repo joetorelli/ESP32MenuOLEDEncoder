@@ -3,53 +3,6 @@
 // #include "INA3221.h"
 #include "OLED.h"
 
-// //#include "mqttController.h"
-
-/* void ReadSwitches(Select_SW *SwState) // Adafruit_SSD1306 *OLED_Display)
-{
-    int SSWAutoPin = 4;   // auto/man pos  BUTTON_A
-    int SSWAlarmPin = 36; // alarm pos BUTTON_B
-    int SSWOffPin = 39;   // off pos BUTTON_C
-    int SSWPumpPin = 34;  // pump pos BUTTON_C
-
-    if (digitalRead(SSWAutoPin) == 0)
-    {
-        SwState->Switch_Auto = 1;
-    }
-    else
-    {
-        SwState->Switch_Auto = 0;
-    }
-
-    if (!digitalRead(SSWAlarmPin))
-    {
-        SwState->Switch_Alarm = 1;
-    }
-    else
-    {
-        SwState->Switch_Alarm = 0;
-    }
-
-    if (!digitalRead(SSWOffPin))
-    {
-        SwState->Switch_Off = 1;
-    }
-    else
-    {
-        SwState->Switch_Off = 0;
-    }
-
-    if (!digitalRead(SSWPumpPin))
-    {
-        SwState->Switch_Pump = 1;
-    }
-    else
-    {
-        SwState->Switch_Pump = 0;
-    }
-}
- */
-
 void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal)
 {
 
@@ -103,19 +56,19 @@ void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal
     SensorLevelVal->ShuntVmv = shunt[INA3221_CH2];
     SensorLevelVal->LoadV = LoadV[INA3221_CH2];
     SensorLevelVal->DepthIn = SensorLevelVal->DepthMM / 25.4;
-/*     Serial.println("Vals In Struct SensorLevelVal for C2");
-    Serial.print("ShuntImA: ");
-    Serial.print(SensorLevelVal->ShuntImA);
-    Serial.print(" BusV: ");
-    Serial.print(SensorLevelVal->BusV);
-    Serial.print(" ShuntVmv: ");
-    Serial.print(SensorLevelVal->ShuntVmv);
-    Serial.print(" LoadV: ");
-    Serial.print(SensorLevelVal->LoadV);
-    Serial.print(" DepthMM: ");
-    Serial.print(SensorLevelVal->DepthMM);
-    Serial.print(" DepthIN: ");
-    Serial.println(SensorLevelVal->DepthIn); */
+    /*     Serial.println("Vals In Struct SensorLevelVal for C2");
+        Serial.print("ShuntImA: ");
+        Serial.print(SensorLevelVal->ShuntImA);
+        Serial.print(" BusV: ");
+        Serial.print(SensorLevelVal->BusV);
+        Serial.print(" ShuntVmv: ");
+        Serial.print(SensorLevelVal->ShuntVmv);
+        Serial.print(" LoadV: ");
+        Serial.print(SensorLevelVal->LoadV);
+        Serial.print(" DepthMM: ");
+        Serial.print(SensorLevelVal->DepthMM);
+        Serial.print(" DepthIN: ");
+        Serial.println(SensorLevelVal->DepthIn); */
 
     // test for bad reading
     if (SensorLevelVal->ShuntImA < 3.5)
@@ -154,18 +107,6 @@ void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal
             break;
         }
     }
-}
-
-// BME_Sensor *ReadSensor(Adafruit_BME280 *bme) //, Adafruit_SSD1306 *OLED_Display)
-void ReadEnvSensor(Adafruit_BME280 *EnvSensor, BME_Sensor *SensorEnvVal)
-{
-
-    // read sensor and load vars
-
-    SensorEnvVal->f_temperature = EnvSensor->readTemperature();
-    SensorEnvVal->f_humidity = EnvSensor->readHumidity();
-    SensorEnvVal->f_pressure = EnvSensor->readPressure() / 100.0F;
-    SensorEnvVal->f_altitude = EnvSensor->readAltitude(SEALEVELPRESSURE_HPA);
 }
 
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax)

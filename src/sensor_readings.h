@@ -6,22 +6,8 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+// #include <Adafruit_BME280.h>
 #include "INA3221.h"
-// #include "settings.h"
-//  #include "sensor_readings.h"
-////#include <Adafruit_INA219.h>
-// #include <movingAvg.h>
-
-#define SEALEVELPRESSURE_HPA (1013.25)
-
-struct BME_Sensor
-{
-    float f_temperature = 0;
-    float f_humidity = 0;
-    float f_pressure = 0;
-    float f_altitude = 0;
-};
 
 struct Select_SW
 {
@@ -44,8 +30,8 @@ struct LevelSensor
     int DepthMM = 0;
 };
 
-void ReadEnvSensor(Adafruit_BME280 *EnvSensor, BME_Sensor *SensorEnvVal);
-// void ReadSwitches(Select_SW *SwState);
+// void ReadEnvSensor(Adafruit_BME280 *EnvSensor, BME_Sensor *SensorEnvVal);
+//  void ReadSwitches(Select_SW *SwState);
 void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal);
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax);
 
