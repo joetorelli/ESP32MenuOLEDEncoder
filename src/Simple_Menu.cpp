@@ -208,6 +208,9 @@ void menu::buildmenu(char nodeIndex, Adafruit_SSD1306 *Disp)
   // Set text to smallest size for menu nodes
   Disp->setTextSize(1); // Normal 1:1 pixel scale
 
+  ////////// adds line under header
+  Disp->println("");
+
   // For every node
   for (int i = 0; i < MAX_NODES; i++)
   {
@@ -502,6 +505,7 @@ void menuFrame::back()
 ----------------------------------------------------------------------------------------------------------------------*/
 void oledSystemInit(Adafruit_SSD1306 *Disp)
 {
+  // Modified to allow call from main
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!Disp->begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
@@ -509,18 +513,17 @@ void oledSystemInit(Adafruit_SSD1306 *Disp)
     for (;;)
       ; // Don't proceed, loop forever
   }
-else
-{
-    
+  else
+  {
+
     Disp->clearDisplay();
-    Disp->setCursor(0,0);
+    Disp->setCursor(0, 0);
     Disp->println("SSD1306 Init");
     Disp->display();
     Serial.println("SSD1306 Init");
     delay(1000);
-
-}
+  }
   Disp->cp437(true); // Use full 256 char 'Code Page 437' font
 
-  Disp->clearDisplay();
+  // Disp->clearDisplay();
 }

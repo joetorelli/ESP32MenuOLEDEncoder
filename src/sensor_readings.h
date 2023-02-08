@@ -7,9 +7,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-// #include "INA3221.h"
-#include "settings.h"
-// #include "sensor_readings.h"
+#include "INA3221.h"
+// #include "settings.h"
+//  #include "sensor_readings.h"
 ////#include <Adafruit_INA219.h>
 // #include <movingAvg.h>
 
@@ -46,7 +46,7 @@ struct LevelSensor
 
 void ReadEnvSensor(Adafruit_BME280 *EnvSensor, BME_Sensor *SensorEnvVal);
 // void ReadSwitches(Select_SW *SwState);
-// void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal);
+void ReadLevelSensor(SDL_Arduino_INA3221 *LevSensor, LevelSensor *SensorLevelVal);
 double mapf(double var, double InMin, double InMax, double OutMin, double OutMax);
 
 #endif
